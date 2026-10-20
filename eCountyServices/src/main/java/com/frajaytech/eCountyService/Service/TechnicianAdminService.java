@@ -8,6 +8,8 @@ import com.frajaytech.eCountyService.Entity.User;
 import com.frajaytech.eCountyService.Repository.DepartmentRepository;
 import com.frajaytech.eCountyService.Repository.UserRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ import java.util.Locale;
 
 @Service
 public class TechnicianAdminService {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(TechnicianAdminService.class);
 
     private final UserRepository users;
     private final DepartmentRepository departments;
@@ -42,10 +47,57 @@ public class TechnicianAdminService {
     }
 
     /**
-     * Creates a technician account and sends an activation email.
+     * Creates an inactive technician account and requests an activation email.
+     *
+     * The technician must activate the account and choose a permanent password
+     * before logging in.
      */
     @Transactional
     public TechnicianResponse create(CreateTechnicianRequest input) {
+
+        if (input == null) {
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "Technician details are required");
+        }
+
+        if (input.fullName() == null
+                || input.fullName().isBlank()) {
+
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "Full name is required");
+        }
+
+        if (input.idNumber() == null
+                || input.idNumber().isBlank()) {
+
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "ID/passport number is required");
+        }
+
+        if (input.email() == null
+                || input.email().isBlank()) {
+
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "Email address is required");
+        }
+
+        if (input.phone() == null
+                || input.phone().isBlank()) {
+
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "Phone number is required");
+        }
+
+        if (input.departmentId() == null) {
+            throw error(
+                    HttpStatus.BAD_REQUEST,
+                    "Department is required");
+        }
 
         String fullName = input.fullName().trim();
         String idNumber = input.idNumber().trim();
@@ -71,10 +123,9 @@ public class TechnicianAdminService {
         }
 
         Department department = departments.findById(input.departmentId())
-                .orElseThrow(() ->
-                        error(
-                                HttpStatus.NOT_FOUND,
-                                "Department not found"));
+                .orElseThrow(() -> error(
+                        HttpStatus.NOT_FOUND,
+                        "Department not found"));
 
         if (!department.isActive()) {
             throw error(
@@ -83,7 +134,7 @@ public class TechnicianAdminService {
         }
 
         // Generate a random initial password.
-        // The technician sets their own password through email activation.
+        // The technician chooses a permanent password through activation.
         byte[] randomBytes = new byte[48];
         secureRandom.nextBytes(randomBytes);
 
@@ -92,19 +143,46 @@ public class TechnicianAdminService {
                 .encodeToString(randomBytes);
 
         User technician = new User();
+
         technician.setFullName(fullName);
         technician.setIdNumber(idNumber);
         technician.setEmail(email);
         technician.setPhone(phone);
-        technician.setPasswordHash(encoder.encode(temporaryPassword));
+        technician.setPasswordHash(
+                encoder.encode(temporaryPassword));
         technician.setRole("TECHNICIAN");
         technician.setActive(false);
         technician.setDepartment(department);
 
         User saved = users.save(technician);
 
-        // Issue an activation token and email the activation link.
-        activationService.issueAndSend(saved);
+        /*
+         * Attempt to issue the activation token and send the email.
+         * The activation service handles mail delivery exceptions.
+         */
+        try {
+            activationService.issueAndSend(saved);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            /*
+             * Unexpected activation/database failures must be logged.
+             * Do not silently claim that an activation token was issued.
+             */
+            logger.error(
+                    "Technician account creation encountered an activation "
+                            + "processing error. Technician ID: {}",
+                    saved.getId(),
+                    exception);
+
+            throw exception;
+        }
+
+        logger.info(
+                "Technician account created. Technician ID: {}, "
+                        + "department ID: {}",
+                saved.getId(),
+                department.getId());
 
         return toResponse(saved);
     }
@@ -143,7 +221,7 @@ public class TechnicianAdminService {
     }
 
     /**
-     * Creates a consistent HTTP error response.
+     * Creates a consistent HTTP error.
      */
     private ResponseStatusException error(
             HttpStatus status,
