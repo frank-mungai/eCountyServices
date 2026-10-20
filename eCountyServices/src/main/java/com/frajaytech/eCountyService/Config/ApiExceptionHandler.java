@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,7 +22,6 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationErrors(
             MethodArgumentNotValidException ex
     ) {
-
         Map<String, String> fieldErrors =
                 ex.getBindingResult()
                         .getFieldErrors()
@@ -43,18 +43,35 @@ public class ApiExceptionHandler {
     }
 
     /**
-     * Handles invalid arguments with a safe client-facing message.
+     * Handles application-request errors safely.
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgument(
             IllegalArgumentException ex
     ) {
-
         Map<String, String> response = new LinkedHashMap<>();
         response.put("message", "Invalid request");
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(response);
+    }
+
+    /**
+     * Preserves HTTP status codes for ResponseStatusException.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatus(
+            ResponseStatusException ex
+    ) {
+        Map<String, String> response = new LinkedHashMap<>();
+        response.put(
+                "message",
+                ex.getReason() == null ? "Request failed" : ex.getReason()
+        );
+
+        return ResponseEntity
+                .status(ex.getStatusCode())
                 .body(response);
     }
 }
