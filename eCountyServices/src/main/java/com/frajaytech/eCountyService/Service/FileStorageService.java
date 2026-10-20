@@ -1,3 +1,4 @@
+
 package com.frajaytech.eCountyService.Service;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -27,13 +28,19 @@ public class FileStorageService {
 
     public FileStorageService(
             @Value("${app.upload.dir}") String dir
-    ) throws IOException {
-
+    ) {
         this.root = Paths.get(dir)
                 .toAbsolutePath()
                 .normalize();
 
-        Files.createDirectories(root);
+        try {
+            Files.createDirectories(this.root);
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Could not create upload directory " + this.root,
+                    e
+            );
+        }
     }
 
     public Path root() {
@@ -65,7 +72,7 @@ public class FileStorageService {
             default -> ".jpg";
         };
 
-        // Never use the client's original file name.
+        // Generate a unique name instead of trusting the client's filename.
         String name = UUID.randomUUID() + ext;
 
         try {

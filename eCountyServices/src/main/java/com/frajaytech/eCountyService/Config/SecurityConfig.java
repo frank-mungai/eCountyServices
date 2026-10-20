@@ -1,3 +1,4 @@
+
 package com.frajaytech.eCountyService.Config;
 
 import com.frajaytech.eCountyService.Security.JwtAuthFilter;
@@ -18,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -30,38 +32,49 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .csrf(c -> c.disable())
+                .csrf(csrf -> csrf.disable())
+
                 .cors(Customizer.withDefaults())
-                .sessionManagement(s ->
-                        s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(a -> a
+
+                .authorizeHttpRequests(auth -> auth
+
+                        // Allow CORS preflight requests.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Existing authentication endpoints, including
+                        // Public health endpoints.
+                        .requestMatchers("/", "/health", "/error").permitAll()
 
+                        // Public technician invitation activation.
                         .requestMatchers("/api/technicians/activate").permitAll()
 
-                        // technician invitation activation, remain public.
+                        // Public registration and login endpoints.
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Existing uploaded-file behavior is preserved.
+                        // Allow access to uploaded images.
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // Administrator-only APIs.
+                        // Administrator-only endpoints.
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Technician-only APIs.
+                        // Technician-only endpoints.
                         .requestMatchers("/api/technician/**").hasRole("TECHNICIAN")
 
-                        // Citizen and other authenticated endpoints.
+                        // All other endpoints require authentication.
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(e ->
-                        e.authenticationEntryPoint(
+
+                // Return HTTP 401 for unauthenticated requests.
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
                         )
                 )
+
+                // Process JWT authentication before username/password authentication.
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -77,19 +90,38 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origin}") String origin
+            @Value("${app.cors.allowed-origin}") String configuredOrigins
     ) {
+
+        // Support comma-separated frontend origins.
+        List<String> origins = Arrays.stream(configuredOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(origin));
-        cfg.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        );
+
+        cfg.setAllowedOrigins(origins);
+
+        cfg.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
         cfg.setAllowedHeaders(List.of("*"));
+
+        // This application uses JWT bearer tokens rather than cookie sessions.
+        cfg.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource src =
                 new UrlBasedCorsConfigurationSource();
 
         src.registerCorsConfiguration("/**", cfg);
+
         return src;
     }
 }
