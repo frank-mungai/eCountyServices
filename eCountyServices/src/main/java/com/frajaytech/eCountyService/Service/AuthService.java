@@ -1,11 +1,10 @@
+
 package com.frajaytech.eCountyService.Service;
 
 import com.frajaytech.eCountyService.Dto.Dtos;
 import com.frajaytech.eCountyService.Entity.User;
 import com.frajaytech.eCountyService.Repository.UserRepository;
 import com.frajaytech.eCountyService.Security.JwtService;
-
-import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -41,7 +40,7 @@ public class AuthService {
         this.lockMinutes = lockMinutes;
     }
 
-    // ---------- Register ----------
+    // ---------- Citizen registration ----------
 
     @Transactional
     public Dtos.MessageResponse register(Dtos.RegisterRequest r) {
@@ -51,9 +50,7 @@ public class AuthService {
         String phone = r.phone().trim();
 
         if (users.existsByEmail(email)) {
-            throw bad(
-                    HttpStatus.CONFLICT,
-                    "Email already registered");
+            throw bad(HttpStatus.CONFLICT, "Email already registered");
         }
 
         if (users.existsByIdNumber(idNumber)) {
@@ -63,9 +60,7 @@ public class AuthService {
         }
 
         if (users.existsByPhone(phone)) {
-            throw bad(
-                    HttpStatus.CONFLICT,
-                    "Phone number already registered");
+            throw bad(HttpStatus.CONFLICT, "Phone number already registered");
         }
 
         User user = new User();
@@ -75,6 +70,11 @@ public class AuthService {
         user.setEmail(email);
         user.setPhone(phone);
         user.setPasswordHash(encoder.encode(r.password()));
+
+        // Public registration must only create citizen accounts.
+        user.setRole("CITIZEN");
+        user.setActive(true);
+        user.setDepartment(null);
 
         users.save(user);
 
@@ -124,6 +124,14 @@ public class AuthService {
                     "Invalid email or password");
         }
 
+        // A correct password is required before revealing account status.
+        // Inactive technicians cannot obtain a JWT.
+        if (!user.isActive()) {
+            throw bad(
+                    HttpStatus.FORBIDDEN,
+                    "This account is inactive. Contact an administrator.");
+        }
+
         // Reset lockout state after successful authentication.
         user.setFailedAttempts(0);
         user.setLockedUntil(null);
@@ -142,9 +150,7 @@ public class AuthService {
 
         User user = users.findById(id)
                 .orElseThrow(() ->
-                        bad(
-                                HttpStatus.NOT_FOUND,
-                                "User not found"));
+                        bad(HttpStatus.NOT_FOUND, "User not found"));
 
         return toDto(user);
     }

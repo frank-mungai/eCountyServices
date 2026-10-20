@@ -1,10 +1,13 @@
+
 package com.frajaytech.eCountyService.Service;
 
 import com.frajaytech.eCountyService.Dto.RequestDtos.*;
+import com.frajaytech.eCountyService.Entity.Department;
 import com.frajaytech.eCountyService.Entity.ServiceRequest;
 import com.frajaytech.eCountyService.Entity.ServiceRequest.Category;
 import com.frajaytech.eCountyService.Entity.ServiceRequest.Status;
 import com.frajaytech.eCountyService.Entity.User;
+import com.frajaytech.eCountyService.Repository.DepartmentRepository;
 import com.frajaytech.eCountyService.Repository.ServiceRequestRepository;
 import com.frajaytech.eCountyService.Repository.UserRepository;
 
@@ -26,6 +29,7 @@ public class RequestService {
 
     private final ServiceRequestRepository requests;
     private final UserRepository users;
+    private final DepartmentRepository departments;
     private final FileStorageService files;
 
     // ---------- Create request ----------
@@ -38,6 +42,10 @@ public class RequestService {
             Double latitude,
             Double longitude,
             String description,
+            String administrativeSubCounty,
+            String constituency,
+            String ward,
+            String village,
             MultipartFile image) {
 
         User citizen = users.findById(userId)
@@ -83,6 +91,19 @@ public class RequestService {
         request.setLatitude(latitude);
         request.setLongitude(longitude);
         request.setDescription(desc);
+
+        request.setAdministrativeSubCounty(
+                cleanLocationPart(administrativeSubCounty, 100));
+
+        request.setConstituency(
+                cleanLocationPart(constituency, 100));
+
+        request.setWard(
+                cleanLocationPart(ward, 100));
+
+        request.setVillage(
+                cleanLocationPart(village, 150));
+
         request.setImagePath(files.store(image));
 
         return toDto(requests.save(request));
@@ -98,6 +119,8 @@ public class RequestService {
                 .map(this::toDto)
                 .toList();
     }
+
+    // ---------- Retrieve one request ----------
 
     @Transactional(readOnly = true)
     public RequestResponse getOne(
@@ -141,6 +164,69 @@ public class RequestService {
                 .toList();
     }
 
+    // ---------- Assign department and technician ----------
+
+    @Transactional
+    public RequestResponse assign(
+            Long requestId,
+            AssignmentUpdate update) {
+
+        if (update == null ||
+                update.departmentId() == null ||
+                update.technicianId() == null) {
+
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Department and technician are required");
+        }
+
+        ServiceRequest request = requests.findById(requestId)
+                .orElseThrow(() ->
+                        bad(HttpStatus.NOT_FOUND, "Request not found"));
+
+        Department department = departments.findById(
+                        update.departmentId())
+                .orElseThrow(() ->
+                        bad(HttpStatus.NOT_FOUND, "Department not found"));
+
+        if (!department.isActive()) {
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Cannot assign a request to an inactive department");
+        }
+
+        User technician = users.findById(update.technicianId())
+                .orElseThrow(() ->
+                        bad(HttpStatus.NOT_FOUND, "Technician not found"));
+
+        if (!"TECHNICIAN".equalsIgnoreCase(technician.getRole())) {
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Selected user is not a technician");
+        }
+
+        if (!technician.isActive()) {
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Cannot assign a request to an inactive technician");
+        }
+
+        if (technician.getDepartment() == null ||
+                !technician.getDepartment().getId()
+                        .equals(department.getId())) {
+
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Technician does not belong to the selected department");
+        }
+
+        request.setDepartment(department);
+        request.setAssignedTechnician(technician);
+        request.setAssignedAt(Instant.now());
+
+        return toDto(requests.save(request));
+    }
+
     // ---------- Update request status ----------
 
     @Transactional
@@ -152,14 +238,22 @@ public class RequestService {
                 .orElseThrow(() ->
                         bad(HttpStatus.NOT_FOUND, "Request not found"));
 
-        if (update.status() == null) {
+        if (update == null || update.status() == null) {
             throw bad(
                     HttpStatus.BAD_REQUEST,
                     "Status is required");
         }
 
+        if (request.getStatus() == null) {
+            throw bad(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Request has no current status");
+        }
+
+        // Prevent moving backwards through the current status sequence.
         if (update.status().ordinal() <
                 request.getStatus().ordinal()) {
+
             throw bad(
                     HttpStatus.BAD_REQUEST,
                     "Status cannot move backwards");
@@ -169,15 +263,20 @@ public class RequestService {
 
         String note = update.adminNote();
 
+        if (note != null && note.trim().length() > 1000) {
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "Note is too long");
+        }
+
         request.setAdminNote(
                 note == null || note.isBlank()
                         ? null
                         : note.trim());
 
-        request.setUpdatedAt(Instant.now());
-
         if (update.status() == Status.RESOLVED &&
                 request.getResolvedAt() == null) {
+
             request.setResolvedAt(Instant.now());
         }
 
@@ -218,11 +317,18 @@ public class RequestService {
 
     private RequestResponse toDto(ServiceRequest request) {
 
+        Department department = request.getDepartment();
+        User technician = request.getAssignedTechnician();
+
         return new RequestResponse(
                 request.getId(),
                 String.format("REQ-%05d", request.getId()),
                 request.getCategory().name(),
                 request.getLocation(),
+                request.getAdministrativeSubCounty(),
+                request.getConstituency(),
+                request.getWard(),
+                request.getVillage(),
                 request.getLatitude(),
                 request.getLongitude(),
                 request.getDescription(),
@@ -235,10 +341,35 @@ public class RequestService {
                 request.getCitizen().getPhone(),
                 request.getCreatedAt(),
                 request.getUpdatedAt(),
-                request.getResolvedAt());
+                request.getResolvedAt(),
+
+                department == null ? null : department.getId(),
+                department == null ? null : department.getName(),
+                technician == null ? null : technician.getId(),
+                technician == null ? null : technician.getFullName(),
+                request.getAssignedAt()
+        );
     }
 
     // ---------- Helpers ----------
+
+    private String cleanLocationPart(String value, int maxLength) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String cleaned = value.trim();
+
+        if (cleaned.length() > maxLength) {
+            throw bad(
+                    HttpStatus.BAD_REQUEST,
+                    "A location field exceeds its maximum length of "
+                            + maxLength + " characters");
+        }
+
+        return cleaned;
+    }
 
     private Category parseCategory(String value) {
         try {
@@ -266,6 +397,7 @@ public class RequestService {
     private ResponseStatusException bad(
             HttpStatus status,
             String message) {
+
         return new ResponseStatusException(status, message);
     }
 }

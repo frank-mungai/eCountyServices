@@ -1,12 +1,20 @@
+
 package com.frajaytech.eCountyService.Entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.Instant;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
@@ -27,26 +35,25 @@ public class User {
     @Column(nullable = false)
     private String role = "CITIZEN";
 
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @Column(nullable = false)
     private int failedAttempts = 0;
+
     private Instant lockedUntil;
+
+    @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    public Long getId() { return id; }
-    public String getFullName() { return fullName; }
-    public void setFullName(String v) { this.fullName = v; }
-    public String getIdNumber() { return idNumber; }
-    public void setIdNumber(String v) { this.idNumber = v; }
-    public String getEmail() { return email; }
-    public void setEmail(String v) { this.email = v; }
-    public String getPhone() { return phone; }
-    public void setPhone(String v) { this.phone = v; }
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String v) { this.passwordHash = v; }
-    public String getRole() { return role; }
-    public void setRole(String v) { this.role = v; }
-    public int getFailedAttempts() { return failedAttempts; }
-    public void setFailedAttempts(int v) { this.failedAttempts = v; }
-    public Instant getLockedUntil() { return lockedUntil; }
-    public void setLockedUntil(Instant v) { this.lockedUntil = v; }
-    public Instant getCreatedAt() { return createdAt; }
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 }
