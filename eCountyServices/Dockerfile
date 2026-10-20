@@ -12,15 +12,13 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-RUN useradd --system --create-home --shell /usr/sbin/nologin appuser
+RUN useradd --system --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/uploads \
+    && chown -R appuser:appuser /app
 
-COPY --from=build /app/target/*.jar /app/app.jar
-
-RUN chown appuser:appuser /app/app.jar
+COPY --from=build --chown=appuser:appuser /app/target/*.jar /app/app.jar
 
 USER appuser
-
-ENV PORT=8080
 
 EXPOSE 8080
 
