@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #006600;
+  --color-brand-dark: #004d00;
+  --color-flag-red: #bb0000;
+  --color-ink: #1a1a1a;
+}
+
+body {
+  @apply bg-slate-50 text-ink antialiased;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
