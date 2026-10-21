@@ -1,4 +1,3 @@
-
 package com.frajaytech.eCountyService.Service;
 
 import com.frajaytech.eCountyService.Dto.TechnicianActivationDtos.ActivateTechnicianRequest;
@@ -12,13 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -38,7 +35,7 @@ public class TechnicianActivationService {
     private final TechnicianActivationTokenRepository tokens;
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
-    private final JavaMailSender mailSender;
+    private final HttpEmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${app.frontend-url:http://localhost:5173}")
@@ -47,19 +44,16 @@ public class TechnicianActivationService {
     @Value("${app.technician-activation.expiry-hours:24}")
     private long expiryHours;
 
-    @Value("${spring.mail.username:}")
-    private String senderEmail;
-
     public TechnicianActivationService(
             TechnicianActivationTokenRepository tokens,
             UserRepository users,
             PasswordEncoder passwordEncoder,
-            JavaMailSender mailSender) {
+            HttpEmailService emailService) {
 
         this.tokens = tokens;
         this.users = users;
         this.passwordEncoder = passwordEncoder;
-        this.mailSender = mailSender;
+        this.emailService = emailService;
     }
 
     /**
@@ -80,10 +74,10 @@ public class TechnicianActivationService {
                     "Activation expiry must be greater than zero hours");
         }
 
-        if (!StringUtils.hasText(senderEmail)) {
+        if (!emailService.isConfigured()) {
             logger.error(
                     "Cannot send technician activation email: "
-                            + "spring.mail.username is not configured. "
+                            + "resend.api-key is not configured. "
                             + "Technician ID: {}",
                     technician.getId());
             return;
@@ -119,14 +113,7 @@ public class TechnicianActivationService {
                 + "/activate-technician?token="
                 + rawToken;
 
-        SimpleMailMessage message = new SimpleMailMessage();
-
-        message.setFrom(senderEmail);
-        message.setTo(technician.getEmail());
-        message.setSubject(
-                "Activate your eCounty Services technician account");
-
-        message.setText(
+        String body =
                 "Hello " + technician.getFullName() + ",\n\n"
                         + "An administrator has registered you as a "
                         + "technician on eCounty Services.\n\n"
@@ -137,17 +124,20 @@ public class TechnicianActivationService {
                         + " hours and can only be used once.\n\n"
                         + "If you were not expecting this invitation, "
                         + "contact your eCounty Services administrator.\n\n"
-                        + "eCounty Services");
+                        + "eCounty Services";
 
         try {
-            mailSender.send(message);
+            emailService.sendText(
+                    technician.getEmail(),
+                    "Activate your eCounty Services technician account",
+                    body);
 
             logger.info(
                     "Activation email submitted successfully for "
                             + "technician ID {}",
                     technician.getId());
 
-        } catch (MailException exception) {
+        } catch (RestClientException exception) {
 
             // Do not log the activation URL or raw activation token.
             logger.error(

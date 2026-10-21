@@ -40,14 +40,27 @@ public class HttpEmailService {
 
     /** Throws RestClientException on network errors or non-2xx responses. */
     public void sendText(String to, String subject, String text) {
+        post(Map.of(
+                "from", from,
+                "to", List.of(to),
+                "subject", subject,
+                "text", text));
+    }
+
+    /** Throws RestClientException on network errors or non-2xx responses. */
+    public void sendHtml(String to, String subject, String html) {
+        post(Map.of(
+                "from", from,
+                "to", List.of(to),
+                "subject", subject,
+                "html", html));
+    }
+
+    private void post(Map<String, Object> body) {
         client.post()
                 .uri("/emails")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                        "from", from,
-                        "to", List.of(to),
-                        "subject", subject,
-                        "text", text))
+                .body(body)
                 .retrieve()
                 .toBodilessEntity();
     }

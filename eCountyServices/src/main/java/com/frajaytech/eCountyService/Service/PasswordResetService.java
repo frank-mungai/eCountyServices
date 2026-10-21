@@ -1,4 +1,3 @@
-
 package com.frajaytech.eCountyService.Service;
 
 import com.frajaytech.eCountyService.Entity.PasswordResetToken;
@@ -6,18 +5,13 @@ import com.frajaytech.eCountyService.Entity.User;
 import com.frajaytech.eCountyService.Repository.PasswordResetTokenRepository;
 import com.frajaytech.eCountyService.Repository.UserRepository;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -38,25 +32,22 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JavaMailSender mailSender;
+    private final HttpEmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    @Value("${app.frontend.url}")
+    @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
-
-    @Value("${spring.mail.username}")
-    private String mailFrom;
 
     public PasswordResetService(
             UserRepository userRepository,
             PasswordResetTokenRepository tokenRepository,
             PasswordEncoder passwordEncoder,
-            JavaMailSender mailSender
+            HttpEmailService emailService
     ) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
-        this.mailSender = mailSender;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -95,12 +86,21 @@ public class PasswordResetService {
         String baseUrl = frontendUrl.replaceAll("/+$", "");
         String resetLink = baseUrl + "/reset-password?token=" + rawToken;
 
+        if (!emailService.isConfigured()) {
+            log.error("Password reset email could not be sent: "
+                    + "resend.api-key is not configured.");
+            throw new IllegalStateException(
+                    "Password reset email could not be sent."
+            );
+        }
+
         try {
             sendResetEmail(normalizedEmail, resetLink);
-        } catch (MailException | MessagingException ex) {
+        } catch (RestClientException ex) {
             log.error(
-                    "Password reset email could not be sent. " +
-                            "Check the configured SMTP service."
+                    "Password reset email could not be sent. "
+                            + "Check the Resend configuration.",
+                    ex
             );
 
             // Roll back token creation if email delivery fails.
@@ -153,22 +153,7 @@ public class PasswordResetService {
         tokenRepository.deleteByUserId(user.getId());
     }
 
-    private void sendResetEmail(
-            String email,
-            String resetLink
-    ) throws MessagingException {
-
-        MimeMessage message = mailSender.createMimeMessage();
-
-        MimeMessageHelper helper = new MimeMessageHelper(
-                message,
-                false,
-                StandardCharsets.UTF_8.name()
-        );
-
-        helper.setFrom(mailFrom);
-        helper.setTo(email);
-        helper.setSubject("Reset your eCounty Services password");
+    private void sendResetEmail(String email, String resetLink) {
 
         String html = """
                 <div style="font-family:Arial,sans-serif;max-width:600px;
@@ -205,8 +190,11 @@ public class PasswordResetService {
                 </div>
                 """.formatted(resetLink, resetLink);
 
-        helper.setText(html, true);
-        mailSender.send(message);
+        emailService.sendHtml(
+                email,
+                "Reset your eCounty Services password",
+                html
+        );
     }
 
     private String hashToken(String rawToken) {
