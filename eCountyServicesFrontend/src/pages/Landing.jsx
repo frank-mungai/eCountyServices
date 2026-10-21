@@ -1,13 +1,12 @@
-
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/StatusBadge";
 import StatusTracker from "../components/StatusTracker";
+import { useState } from "react";
 
 import {
   ArrowRight,
   ShieldCheck,
-  Lightbulb,
   Droplets,
   Trash2,
   Construction,
@@ -25,8 +24,6 @@ import {
   X,
   MessageSquareText,
 } from "lucide-react";
-
-import { useState } from "react";
 
 const SERVICES = [
   {
@@ -107,15 +104,21 @@ const SAMPLE_CATEGORIES = [
   { name: "Environment", percentage: 30, color: "bg-emerald-500" },
 ];
 
+/* County logo: uses public/images/logo.jpg instead of the MC placeholder. */
+
 function CountyLogo({ compact = false }) {
   return (
     <div className="flex shrink-0 items-center gap-3">
       <div
-        className={`grid place-items-center rounded-2xl bg-emerald-800 font-extrabold text-white shadow-sm ${
-          compact ? "h-10 w-10 text-xs" : "h-12 w-12 text-sm"
+        className={`grid shrink-0 place-items-center overflow-hidden rounded-lg bg-white ${
+          compact ? "h-10 w-10" : "h-12 w-12"
         }`}
       >
-        MC
+        <img
+          src="/images/muranga-county-logo.png"
+          alt="Murang’a County Government logo"
+          className="h-full w-full object-contain"
+        />
       </div>
 
       <div>
@@ -126,6 +129,7 @@ function CountyLogo({ compact = false }) {
         >
           MURANG’A COUNTY
         </p>
+
         <p className="text-xs text-slate-500">
           Public Service Request System
         </p>
@@ -133,6 +137,7 @@ function CountyLogo({ compact = false }) {
     </div>
   );
 }
+
 
 function KenyaAccent() {
   return (
@@ -157,7 +162,11 @@ function Header({ home }) {
       <KenyaAccent />
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/" aria-label="Murang’a County home" onClick={closeMenu}>
+        <Link
+          to="/"
+          aria-label="Murang’a County home"
+          onClick={closeMenu}
+        >
           <CountyLogo />
         </Link>
 
@@ -168,18 +177,21 @@ function Header({ home }) {
           >
             Services
           </a>
+
           <a
             href="#how-it-works"
             className="transition hover:text-emerald-700"
           >
             How it works
           </a>
+
           <a
             href="#tracking"
             className="transition hover:text-emerald-700"
           >
             Track requests
           </a>
+
           <a
             href="#county-teams"
             className="transition hover:text-emerald-700"
@@ -268,6 +280,7 @@ function Header({ home }) {
                 >
                   Sign in
                 </Link>
+
                 <Link
                   to="/register"
                   onClick={closeMenu}
@@ -288,7 +301,7 @@ function Hero({ home }) {
   return (
     <section className="relative isolate overflow-hidden bg-emerald-950">
       <img
-        src="../images/murangaCounty.jpg"
+        src="/images/murangaCounty.jpg"
         alt="Landscape representing the green countryside of Murang’a County"
         fetchPriority="high"
         className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
@@ -360,9 +373,11 @@ function Hero({ home }) {
                 <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">
                   Citizen services
                 </p>
+
                 <h2 className="mt-2 text-2xl font-extrabold text-slate-900">
                   How can we help?
                 </h2>
+
                 <p className="mt-1 text-sm text-slate-500">
                   Choose a service category.
                 </p>
@@ -408,9 +423,11 @@ function Hero({ home }) {
                     >
                       <ServiceIcon className="h-6 w-6" />
                     </span>
+
                     <p className="mt-3 font-bold text-slate-900">
                       {item.name}
                     </p>
+
                     <p className="mt-1 text-xs text-slate-500">
                       Submit a report
                     </p>
@@ -421,6 +438,7 @@ function Hero({ home }) {
 
             <div className="mt-5 flex items-center gap-3 rounded-xl bg-emerald-50 p-4">
               <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-700" />
+
               <p className="text-sm leading-6 text-emerald-950">
                 Keep your reference number and check request progress online.
               </p>
@@ -443,9 +461,11 @@ function Services() {
             <p className="text-sm font-extrabold uppercase tracking-widest text-emerald-700">
               County services
             </p>
+
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
               Services at your fingertips.
             </h2>
+
             <p className="mt-4 leading-7 text-slate-600">
               Select the service category that best describes the problem
               affecting your community.
@@ -524,9 +544,11 @@ function HowItWorks() {
           <p className="text-sm font-extrabold uppercase tracking-widest text-emerald-700">
             Simple and transparent
           </p>
+
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             From report to resolution.
           </h2>
+
           <p className="mt-4 leading-7 text-slate-600">
             Submit a service request and follow its progress through three
             simple steps.
@@ -557,6 +579,7 @@ function HowItWorks() {
                 <h3 className="mt-6 text-xl font-extrabold text-slate-900">
                   {step.title}
                 </h3>
+
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   {step.text}
                 </p>
@@ -598,6 +621,7 @@ function Transparency() {
             ].map((item) => (
               <li key={item} className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+
                 <span className="text-sm leading-6 text-slate-700">
                   {item}
                 </span>
@@ -621,9 +645,11 @@ function Transparency() {
                 <ClipboardList className="h-4 w-4" />
                 Example request
               </span>
+
               <h3 className="mt-4 text-xl font-extrabold text-slate-900">
                 Water supply issue
               </h3>
+
               <p className="mt-1 text-sm text-slate-500">
                 Reference: MC-00124
               </p>
@@ -638,6 +664,7 @@ function Transparency() {
             <span className="text-sm font-semibold text-slate-700">
               Current status
             </span>
+
             <StatusBadge status="IN_PROGRESS" />
           </div>
 
@@ -647,10 +674,12 @@ function Transparency() {
 
           <div className="mt-5 flex gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
             <MessageSquareText className="h-5 w-5 shrink-0 text-emerald-700" />
+
             <div>
               <p className="text-sm font-bold text-emerald-950">
                 Example progress update
               </p>
+
               <p className="mt-1 text-sm leading-6 text-emerald-900">
                 The responsible team is reviewing the reported issue. Check
                 your request for further updates.
@@ -697,10 +726,12 @@ function TeamPreview() {
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-200">
               County operations
             </p>
+
             <h3 className="mt-2 text-xl font-extrabold">
               Service overview
             </h3>
           </div>
+
           <div className="rounded-xl bg-white/10 p-3">
             <ChartNoAxesCombined className="h-7 w-7" />
           </div>
@@ -722,9 +753,11 @@ function TeamPreview() {
                 >
                   <StatIcon className="h-5 w-5" />
                 </span>
+
                 <p className="mt-3 text-2xl font-extrabold text-slate-900">
                   {stat.value}
                 </p>
+
                 <p className="mt-1 text-xs text-slate-500">
                   {stat.label}
                 </p>
@@ -738,6 +771,7 @@ function TeamPreview() {
             <h4 className="font-bold text-slate-900">
               Requests by category
             </h4>
+
             <span className="text-xs text-slate-500">Sample data</span>
           </div>
 
@@ -748,6 +782,7 @@ function TeamPreview() {
                   <span className="font-medium text-slate-700">
                     {category.name}
                   </span>
+
                   <span className="text-slate-500">
                     {category.percentage}%
                   </span>
@@ -766,6 +801,7 @@ function TeamPreview() {
 
         <div className="mt-7 flex items-start gap-3 rounded-xl bg-amber-50 p-4">
           <Users className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+
           <p className="text-xs leading-5 text-amber-900">
             Demonstration statistics only. Connect the dashboard to your
             application's actual request data before using operational
@@ -839,6 +875,7 @@ function ForCountyTeams() {
                     <h3 className="font-bold text-slate-900">
                       {item.title}
                     </h3>
+
                     <p className="mt-1 text-sm leading-6 text-slate-600">
                       {item.text}
                     </p>
@@ -858,8 +895,8 @@ function FinalCta({ home }) {
     <section className="relative isolate overflow-hidden bg-emerald-900 py-16 text-white sm:py-20">
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-950" />
 
-      <div className="absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
-      <div className="absolute -bottom-24 -left-24 -z-10 h-80 w-80 rounded-full bg-green-300/10 blur-3xl" />
+      <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+      <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-green-300/10 blur-3xl" />
 
       <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
@@ -921,6 +958,7 @@ function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <CountyLogo />
+
             <p className="mt-4 max-w-sm text-sm leading-6 text-slate-400">
               A proposed digital platform for reporting public service
               concerns and tracking requests affecting communities in
@@ -930,16 +968,20 @@ function Footer() {
 
           <div>
             <h3 className="font-bold text-white">Explore</h3>
+
             <div className="mt-4 flex flex-col items-start gap-3 text-sm text-slate-400">
               <a href="#services" className="hover:text-white">
                 County services
               </a>
+
               <a href="#how-it-works" className="hover:text-white">
                 How it works
               </a>
+
               <a href="#tracking" className="hover:text-white">
                 Request tracking
               </a>
+
               <a href="#county-teams" className="hover:text-white">
                 County teams
               </a>
@@ -948,10 +990,12 @@ function Footer() {
 
           <div>
             <h3 className="font-bold text-white">Your account</h3>
+
             <div className="mt-4 flex flex-col items-start gap-3 text-sm text-slate-400">
               <Link to="/login" className="hover:text-white">
                 Sign in
               </Link>
+
               <Link to="/register" className="hover:text-white">
                 Create an account
               </Link>
@@ -959,8 +1003,11 @@ function Footer() {
 
             <div className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-500">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              Independent demonstration project. Not an official Murang’a
-              County Government website.
+
+              <p>
+                Independent demonstration project. Not an official Murang’a
+                County Government website.
+              </p>
             </div>
           </div>
         </div>
@@ -970,6 +1017,7 @@ function Footer() {
             © {new Date().getFullYear()} Murang’a County Service Portal
             Concept.
           </p>
+
           <p>Designed for responsive desktop and mobile browsing.</p>
         </div>
       </div>

@@ -9,6 +9,8 @@ import NewRequest from "./pages/NewRequest";
 import RequestDetail from "./pages/RequestDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 import ActivateTechnician from "./pages/ActivateTechnician";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
@@ -31,6 +33,16 @@ export default function App() {
             <Dashboard />
           </ProtectedRoute>
         }
+      />
+
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
+
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
       />
 
       <Route

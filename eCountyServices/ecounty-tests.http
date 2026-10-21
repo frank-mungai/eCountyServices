@@ -1,0 +1,75 @@
+
+### eCounty Services - Local API Tests
+
+@host = http://localhost:8080
+@adminEmail = admin@ecounty.go.ke
+@adminPassword = eulp tzoi fmkm peei
+@technicianEmail = franciskamande14@gmail.com
+@technicianPassword = CountyTech-2026-Secure!
+
+### 1. Login as administrator
+# @name adminLogin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### 2. List departments
+# Replace YOUR_ADMIN_JWT with the JWT returned by admin login.
+GET {{host}}/api/admin/departments
+Authorization: Bearer YOUR_ADMIN_JWT
+
+### 3. Create a department
+POST {{host}}/api/admin/departments
+Authorization: Bearer YOUR_ADMIN_JWT
+Content-Type: application/json
+
+{
+  "code": "ROADS",
+  "name": "Roads and Transport",
+  "description": "Road maintenance and transport services"
+}
+
+### 4. Create a technician
+# Use a Gmail inbox you can access.
+# Change departmentId if your department has a different ID.
+POST {{host}}/api/admin/technicians
+Authorization: Bearer YOUR_ADMIN_JWT
+Content-Type: application/json
+
+{
+  "fullName": "Test Technician",
+  "idNumber": "TEST-TECH-001",
+  "email": "{{technicianEmail}}",
+  "phone": "0700000000",
+  "departmentId": 1
+}
+
+### 5. Activate technician
+# Paste the token from the activation email.
+POST {{host}}/api/technicians/activate
+Content-Type: application/json
+
+{
+  "token": "eulp tzoi fmkm peei",
+  "password": "{{technicianPassword}}",
+  "confirmPassword": "{{technicianPassword}}"
+}
+
+### 6. Login as activated technician
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{technicianEmail}}",
+  "password": "{{technicianPassword}}"
+}
+
+### 7. Resend activation email if needed
+# Requires an administrator JWT.
+# Replace 1 with the actual technician ID.
+POST {{host}}/api/admin/technicians/1/activation-email
+Authorization: Bearer YOUR_ADMIN_JWT

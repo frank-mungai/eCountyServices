@@ -1,12 +1,12 @@
 import axios from "axios";
 
 export const API_ORIGIN =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:8080";
 
 const api = axios.create({
   baseURL: `${API_ORIGIN.replace(/\/+$/, "")}/api`,
-  // Enable this if your backend uses cookie-based sessions.
-  // withCredentials: true,
+  timeout: 30000,
 });
 
 api.interceptors.request.use((config) => {
@@ -20,15 +20,24 @@ api.interceptors.request.use((config) => {
 });
 
 export const errorMessage = (err) => {
-  if (err.response?.data?.message) {
-    return err.response.data.message;
+  const data = err.response?.data;
+
+  if (data?.errors && typeof data.errors === "object") {
+    return Object.values(data.errors).join(" ");
+  }
+
+  if (data?.message) {
+    return data.message;
   }
 
   if (err.response?.status) {
     return `Request failed (${err.response.status}). Please try again.`;
   }
 
-  return err.message || "Cannot connect to the server. Check that Spring Boot is running.";
+  return (
+    err.message ||
+    "Cannot connect to the server. Check your internet connection."
+  );
 };
 
 export default api;
